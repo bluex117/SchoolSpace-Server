@@ -36,12 +36,6 @@ namespace backend.app.configurations.application
 
         private static string ResolveIpAddress(HttpContext context)
         {
-            var forwarded = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(forwarded))
-            {
-                return forwarded.Split(',', StringSplitOptions.TrimEntries)[0];
-            }
-
             return context.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
         }
 

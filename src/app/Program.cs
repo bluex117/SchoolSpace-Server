@@ -18,7 +18,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton(Logger.GetOptions());
 
-builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.AddServerHeader = false;
+    options.Limits.MaxRequestBodySize = 1_048_576; // 1 MB
+});
 
 var port = builder.ConfigureServerUrls();
 
@@ -40,6 +44,8 @@ builder.Services.AddJwtAuth(builder.Configuration);
 builder.Services.AddCustomCors(builder.Configuration);
 builder.Services.AddCustomCsrf();
 builder.Services.AddInMemoryRateLimiter();
+builder.Services.AddCustomRequestTimeouts();
+builder.Services.AddForwardedHeaders();
 
 builder.Services.AddWebConfiguration(builder.Configuration);
 
@@ -49,9 +55,15 @@ Logger.SetInstance(app.Services.GetRequiredService<ICustomLogger>());
 
 await DatabaseConfig.VerifyDatabaseConnectionAsync(app.Services);
 
+app.UseForwardedHeaders();
+
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
+app.UseRequestId();
+
 app.UseRouting();
+
+app.UseRequestTimeouts();
 
 app.UseRateLimiter();
 

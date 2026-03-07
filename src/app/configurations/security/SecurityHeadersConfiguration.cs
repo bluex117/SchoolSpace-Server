@@ -10,6 +10,10 @@ namespace backend.app.configurations.security
         private const string ReferrerPolicy = "Referrer-Policy";
         private const string PermissionsPolicy = "Permissions-Policy";
         private const string ContentSecurityPolicy = "Content-Security-Policy";
+        private const string CrossOriginOpenerPolicy = "Cross-Origin-Opener-Policy";
+        private const string CrossOriginResourcePolicy = "Cross-Origin-Resource-Policy";
+        private const string XDnsPrefetchControl = "X-DNS-Prefetch-Control";
+        private const string CacheControl = "Cache-Control";
 
         public static IApplicationBuilder UseSecurityHeaders(this IApplicationBuilder app)
         {
@@ -26,6 +30,14 @@ namespace backend.app.configurations.security
                 context.Response.Headers[PermissionsPolicy] = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()";
 
                 context.Response.Headers[ContentSecurityPolicy] = "default-src 'none'; frame-ancestors 'none'";
+
+                context.Response.Headers[CrossOriginOpenerPolicy] = "same-origin";
+
+                context.Response.Headers[CrossOriginResourcePolicy] = "same-origin";
+
+                context.Response.Headers[XDnsPrefetchControl] = "off";
+
+                context.Response.Headers[CacheControl] = "no-store";
 
                 await next(context);
             });
