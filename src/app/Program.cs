@@ -31,6 +31,7 @@ builder.Services.AddControllersWithViews(options =>
 
 builder.Services.AddApplicationServices();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddClientRequestInspection();
 
 builder.Services.AddAppDatabase(builder.Configuration);
 builder.Services.AddAppRedis(builder.Configuration);
@@ -77,6 +78,8 @@ app.UseRefreshCsrfValidation();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseClientRequestInspection();
 
 app.UseStaticFiles();
 
