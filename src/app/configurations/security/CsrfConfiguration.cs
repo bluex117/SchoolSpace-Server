@@ -1,3 +1,4 @@
+using backend.app.dtos.general;
 using Microsoft.AspNetCore.Antiforgery;
 
 namespace backend.app.configurations.security
@@ -24,6 +25,7 @@ namespace backend.app.configurations.security
 
             return services;
         }
+
         public static void SetCsrfCookie(HttpContext httpContext, IAntiforgery antiforgery)
         {
             var tokens = antiforgery.GetAndStoreTokens(httpContext);
@@ -46,7 +48,8 @@ namespace backend.app.configurations.security
         {
             return app.Use(async (ctx, next) =>
             {
-                if (IsRefreshEndpoint(ctx.Request))
+                var clientInfo = ctx.RequestServices.GetRequiredService<ClientRequestInfo>();
+                if (clientInfo.IsBrowserClient && IsRefreshEndpoint(ctx.Request))
                 {
                     var antiforgery = ctx.RequestServices.GetRequiredService<IAntiforgery>();
                     SetCsrfCookie(ctx, antiforgery);
@@ -60,7 +63,10 @@ namespace backend.app.configurations.security
         {
             return app.Use(async (ctx, next) =>
             {
-                if (IsCsrfProtectedEndpoint(ctx.Request) && HttpMethods.IsPost(ctx.Request.Method))
+                var clientInfo = ctx.RequestServices.GetRequiredService<ClientRequestInfo>();
+                if (clientInfo.IsBrowserClient
+                    && IsCsrfProtectedEndpoint(ctx.Request)
+                    && HttpMethods.IsPost(ctx.Request.Method))
                 {
                     var antiforgery = ctx.RequestServices.GetRequiredService<IAntiforgery>();
                     await antiforgery.ValidateRequestAsync(ctx);

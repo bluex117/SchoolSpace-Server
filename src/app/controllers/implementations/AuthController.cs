@@ -1,4 +1,5 @@
 using backend.app.configurations.security;
+using backend.app.dtos.general;
 using backend.app.dtos.request.auth;
 using backend.app.dtos.responses.auth;
 using backend.app.errors.http;
@@ -14,15 +15,23 @@ namespace backend.app.implementations.Controllers
     [Route("auth")]
     public sealed class AuthController : ControllerBase
     {
+        private const string RefreshTokenCookieName = "refreshToken";
+
         private readonly IAuthService _authService;
         private readonly IAntiforgery _antiforgery;
         private readonly ICustomLogger _logger;
+        private readonly ClientRequestInfo _clientInfo;
 
-        public AuthController(IAuthService authService, IAntiforgery antiforgery, ICustomLogger logger)
+        public AuthController(
+            IAuthService authService,
+            IAntiforgery antiforgery,
+            ICustomLogger logger,
+            ClientRequestInfo clientInfo)
         {
             _authService = authService;
             _antiforgery = antiforgery;
             _logger = logger;
+            _clientInfo = clientInfo;
         }
 
         [HttpPost("login")]
@@ -31,8 +40,7 @@ namespace backend.app.implementations.Controllers
             try
             {
                 var result = await _authService.LoginAsync(request.Email, request.Password, request.RememberMe);
-                CsrfConfiguration.SetCsrfCookie(HttpContext, _antiforgery);
-                return Ok(result);
+                return BuildAuthResponse(result);
             }
             catch (Exception e)
             {
@@ -50,8 +58,7 @@ namespace backend.app.implementations.Controllers
             try
             {
                 var result = await _authService.SignupAsync(request);
-                CsrfConfiguration.SetCsrfCookie(HttpContext, _antiforgery);
-                return CreatedAtAction(nameof(Login), result);
+                return BuildAuthResponse(result, StatusCodes.Status201Created);
             }
             catch (Exception e)
             {
@@ -118,16 +125,15 @@ namespace backend.app.implementations.Controllers
         }
 
         [HttpPost("refresh")]
-        public async Task<IActionResult> Refresh(CancellationToken cancellationToken)
+        public async Task<IActionResult> Refresh(
+            [FromBody] RefreshTokenRequest? request,
+            CancellationToken cancellationToken)
         {
             try
             {
-                string? refreshToken = Request.Cookies["refreshToken"];
-                if (string.IsNullOrEmpty(refreshToken))
-                    throw new UnauthorizedException("Missing refresh token");
+                var refreshToken = ResolveRefreshToken(request);
                 var result = await _authService.RefreshAsync(refreshToken);
-                CsrfConfiguration.SetCsrfCookie(HttpContext, _antiforgery);
-                return Ok(result);
+                return BuildAuthResponse(result);
             }
             catch (Exception e)
             {
@@ -140,14 +146,18 @@ namespace backend.app.implementations.Controllers
         }
 
         [HttpPost("logout")]
-        public async Task<IActionResult> Logout(CancellationToken cancellationToken)
+        public async Task<IActionResult> Logout(
+            [FromBody] RefreshTokenRequest? request,
+            CancellationToken cancellationToken)
         {
             try
             {
-                string? refreshToken = Request.Cookies["refreshToken"];
-                if (string.IsNullOrEmpty(refreshToken))
-                    throw new UnauthorizedException("Missing refresh token");
+                var refreshToken = ResolveRefreshToken(request);
                 var success = await _authService.LogoutAsync(refreshToken);
+
+                if (_clientInfo.IsBrowserClient)
+                    DeleteRefreshTokenCookie();
+
                 return Ok(new { message = success ? "Logged out successfully." : "Token was already invalid or missing." });
             }
             catch (Exception e)
@@ -187,8 +197,7 @@ namespace backend.app.implementations.Controllers
             try
             {
                 var result = await _authService.LoginWithGoogleAsync(request.Token);
-                CsrfConfiguration.SetCsrfCookie(HttpContext, _antiforgery);
-                return Ok(result);
+                return BuildAuthResponse(result);
             }
             catch (Exception e)
             {
@@ -206,8 +215,7 @@ namespace backend.app.implementations.Controllers
             try
             {
                 var result = await _authService.LoginWithMicrosoftAsync(request.Token);
-                CsrfConfiguration.SetCsrfCookie(HttpContext, _antiforgery);
-                return Ok(result);
+                return BuildAuthResponse(result);
             }
             catch (Exception e)
             {
@@ -217,6 +225,64 @@ namespace backend.app.implementations.Controllers
                 _logger.Error($"[AuthController] MicrosoftOAuth failed: {e}");
                 return HandleError.Resolve(e);
             }
+        }
+
+        private string ResolveRefreshToken(RefreshTokenRequest? request)
+        {
+            if (_clientInfo.IsBrowserClient)
+            {
+                var token = Request.Cookies[RefreshTokenCookieName];
+                if (string.IsNullOrEmpty(token))
+                    throw new UnauthorizedException("Missing refresh token");
+                return token;
+            }
+
+            if (string.IsNullOrEmpty(request?.RefreshToken))
+                throw new UnauthorizedException("Missing refresh token");
+            return request.RefreshToken;
+        }
+
+        private IActionResult BuildAuthResponse(AuthResult result, int statusCode = StatusCodes.Status200OK)
+        {
+            if (_clientInfo.IsBrowserClient)
+            {
+                SetRefreshTokenCookie(result.RefreshToken);
+                CsrfConfiguration.SetCsrfCookie(HttpContext, _antiforgery);
+
+                return StatusCode(statusCode, new
+                {
+                    result.AccessToken,
+                    result.UserId,
+                    result.Username,
+                    result.Role,
+                    result.AvatarUrl
+                });
+            }
+
+            return StatusCode(statusCode, result);
+        }
+
+        private void SetRefreshTokenCookie(string refreshToken)
+        {
+            Response.Cookies.Append(RefreshTokenCookieName, refreshToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = Request.IsHttps,
+                SameSite = SameSiteMode.Lax,
+                Path = "/api/auth",
+                MaxAge = TimeSpan.FromDays(7)
+            });
+        }
+
+        private void DeleteRefreshTokenCookie()
+        {
+            Response.Cookies.Delete(RefreshTokenCookieName, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = Request.IsHttps,
+                SameSite = SameSiteMode.Lax,
+                Path = "/api/auth"
+            });
         }
     }
 }

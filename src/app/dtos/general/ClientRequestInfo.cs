@@ -5,5 +5,6 @@ namespace backend.app.dtos.general
         public string IpAddress { get; set; } = "Unknown";
         public string DeviceType { get; set; } = "Unknown";
         public string ClientName { get; set; } = "Unknown";
+        public bool IsBrowserClient { get; set; } = true;
     }
 }

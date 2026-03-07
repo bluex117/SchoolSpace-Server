@@ -25,13 +25,25 @@ namespace backend.app.configurations.application
             _next = next;
         }
 
+        public const string ClientTypeHeader = "X-Client-Type";
+
         public async Task InvokeAsync(HttpContext context, ClientRequestInfo requestInfo)
         {
             requestInfo.IpAddress = ResolveIpAddress(context);
             requestInfo.ClientName = ResolveClientName(context);
             requestInfo.DeviceType = ResolveDeviceType(context);
+            requestInfo.IsBrowserClient = ResolveIsBrowser(context);
 
             await _next(context);
+        }
+
+        private static bool ResolveIsBrowser(HttpContext context)
+        {
+            var clientType = context.Request.Headers[ClientTypeHeader].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(clientType))
+                return clientType.Equals("browser", StringComparison.OrdinalIgnoreCase);
+
+            return true;
         }
 
         private static string ResolveIpAddress(HttpContext context)
