@@ -1,4 +1,4 @@
-namespace backend.app.repositories.attributes
+namespace backend.app.attributes.repository
 {
     /// When applied to a repository method, update/delete on a non-existent or already-deleted
     /// entity is handled gracefully instead of throwing. Catches DbUpdateConcurrencyException

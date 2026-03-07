@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace backend.app.repositories.attributes
+namespace backend.app.attributes.repository
 {
     /// Resolves repository method behavior from attributes with a clear precedence order:
     /// interface method → implementation method → implementation class → interface type (first found wins per attribute).

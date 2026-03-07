@@ -1,5 +1,5 @@
 using backend.app.models.core;
-using backend.app.repositories.attributes;
+using backend.app.attributes.repository;
 
 namespace backend.app.repositories.interfaces
 {

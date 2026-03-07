@@ -1,5 +1,5 @@
 using backend.app.configurations.resources;
-using backend.app.repositories.attributes;
+using backend.app.attributes.repository;
 using backend.app.repositories.extensions;
 using backend.app.repositories.implementations;
 using backend.app.repositories.interfaces;

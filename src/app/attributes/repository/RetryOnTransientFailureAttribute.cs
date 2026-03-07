@@ -1,4 +1,4 @@
-namespace backend.app.repositories.attributes
+namespace backend.app.attributes.repository
 {
     /// Marks a repository method (or class/interface) to run with retry and exponential backoff on transient failures.
     ///

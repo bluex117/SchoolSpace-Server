@@ -1,4 +1,4 @@
-namespace backend.app.repositories.attributes
+namespace backend.app.attributes.repository
 {
     /// Result of resolving attributes for a repository method. Used by the proxy to decide retry and missing-entity handling.
     /// Precedence: interface method → implementation method → implementation class → interface type (first found wins).

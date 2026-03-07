@@ -1,4 +1,4 @@
-namespace backend.app.repositories.attributes
+namespace backend.app.attributes.repository
 {
     /// When applied to a repository method, the call runs once with no retries, circuit breaker, or timeout.
     ///

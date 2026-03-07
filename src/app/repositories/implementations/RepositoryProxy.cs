@@ -1,6 +1,6 @@
 using System.Reflection;
 
-using backend.app.repositories.attributes;
+using backend.app.attributes.repository;
 using backend.app.repositories.resilience;
 
 using Microsoft.EntityFrameworkCore;

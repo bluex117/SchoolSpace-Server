@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 
-namespace backend.app.attributes;
+namespace backend.app.attributes.validation;
 
 public class StrongPasswordAttribute : ValidationAttribute
 {

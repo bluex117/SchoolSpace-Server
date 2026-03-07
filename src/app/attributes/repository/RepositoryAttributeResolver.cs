@@ -2,7 +2,7 @@ using System.Reflection;
 
 using Microsoft.Extensions.Logging;
 
-namespace backend.app.repositories.attributes
+namespace backend.app.attributes.repository
 {
     /// Resolves NoRetry and HandleMissingEntity with precedence: interface method → impl method → impl class → interface.
     /// First occurrence of each attribute wins. When conflicting attributes appear at different levels (e.g. NoRetry
