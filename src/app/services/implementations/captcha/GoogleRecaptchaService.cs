@@ -1,22 +1,23 @@
 using System.Text.Json;
+
+using backend.app.http;
 using backend.app.services.interfaces;
 using backend.main.dtos.responses.external;
-using Polly.CircuitBreaker;
 
 namespace backend.app.services.implementations
 {
     public sealed class GoogleCaptchaService : ICaptchaService
     {
-        private const string VerifyPath = "recaptcha/api/siteverify";
+        private const string VerifyUrl = "https://www.google.com/recaptcha/api/siteverify";
 
-        private readonly HttpClient _http;
+        private readonly IExternalApiClient _apiClient;
         private readonly ILogger<GoogleCaptchaService> _logger;
         private readonly string? _captchaSecret;
         private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
 
-        public GoogleCaptchaService(HttpClient http, ILogger<GoogleCaptchaService> logger, IConfiguration config)
+        public GoogleCaptchaService(IExternalApiClient apiClient, ILogger<GoogleCaptchaService> logger, IConfiguration config)
         {
-            _http = http;
+            _apiClient = apiClient;
             _logger = logger;
             _captchaSecret = config["GoogleCaptcha:Secret"] ?? config["GOOGLE_CAPTCHA_SECRET"];
         }
@@ -37,7 +38,7 @@ namespace backend.app.services.implementations
                     ["response"] = token
                 });
 
-                using var resp = await _http.PostAsync(VerifyPath, form, cancellationToken);
+                using var resp = await _apiClient.PostAsync(VerifyUrl, form, cancellationToken);
 
                 if (!resp.IsSuccessStatusCode)
                 {
@@ -68,11 +69,6 @@ namespace backend.app.services.implementations
                     return false;
                 }
 
-                return true;
-            }
-            catch (BrokenCircuitException ex)
-            {
-                _logger.LogError(ex, "[Captcha] Circuit open. Skipping Google call. Allowing login (fail-open).");
                 return true;
             }
             catch (Exception ex)

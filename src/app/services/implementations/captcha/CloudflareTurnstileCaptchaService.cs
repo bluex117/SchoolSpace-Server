@@ -2,6 +2,7 @@ using System.Text.Json;
 
 using backend.app.dtos.responses.external;
 using backend.app.errors.http;
+using backend.app.http;
 using backend.app.services.interfaces;
 
 using Microsoft.AspNetCore.Http;
@@ -11,21 +12,20 @@ namespace backend.app.services.implementations
     public sealed class CloudflareTurnstileCaptchaService : ICaptchaService
     {
         private const string SiteverifyUrl = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
-        private const int DefaultTimeoutSeconds = 5;
 
-        private readonly HttpClient _http;
+        private readonly IExternalApiClient _apiClient;
         private readonly ILogger<CloudflareTurnstileCaptchaService> _logger;
         private readonly string _secret;
         private readonly IHttpContextAccessor? _httpContextAccessor;
         private static readonly JsonSerializerOptions JsonOpts = new(JsonSerializerDefaults.Web);
 
         public CloudflareTurnstileCaptchaService(
-            HttpClient http,
+            IExternalApiClient apiClient,
             ILogger<CloudflareTurnstileCaptchaService> logger,
             IConfiguration config,
             IHttpContextAccessor? httpContextAccessor = null)
         {
-            _http = http;
+            _apiClient = apiClient;
             _logger = logger;
             _httpContextAccessor = httpContextAccessor;
 
@@ -36,9 +36,6 @@ namespace backend.app.services.implementations
                     "Cloudflare Turnstile secret is not configured. Set one of: Turnstile:Secret, CLOUDFLARE_TURNSTILE_SECRET, or TURNSTILE_SECRET.");
             }
             _secret = secret;
-
-            var timeoutSeconds = config.GetValue("Turnstile:TimeoutSeconds", DefaultTimeoutSeconds);
-            _http.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
         }
 
         /// <inheritdoc />
@@ -58,7 +55,7 @@ namespace backend.app.services.implementations
 
                 using var form = new FormUrlEncodedContent(formData);
 
-                using var resp = await _http.PostAsync(SiteverifyUrl, form, cancellationToken);
+                using var resp = await _apiClient.PostAsync(SiteverifyUrl, form, cancellationToken);
 
                 if (!resp.IsSuccessStatusCode)
                 {

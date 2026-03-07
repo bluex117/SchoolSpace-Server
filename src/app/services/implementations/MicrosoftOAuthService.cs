@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 
 using backend.app.configurations.environment;
 using backend.app.errors.http;
+using backend.app.http;
 using backend.app.models.other;
 using backend.app.services.interfaces;
 
@@ -14,10 +15,17 @@ namespace backend.app.services.implementations
     public class MicrosoftOAuthService : IMicrosoftOAuthService
     {
         private readonly string? _clientId;
+        private readonly ConfigurationManager<OpenIdConnectConfiguration> _configManager;
 
-        public MicrosoftOAuthService()
+        public MicrosoftOAuthService(IExternalApiClient apiClient)
         {
             _clientId = EnvironmentSetting.MicrosoftClientId;
+
+            _configManager = new ConfigurationManager<OpenIdConnectConfiguration>(
+                "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration",
+                new OpenIdConnectConfigurationRetriever(),
+                new HttpDocumentRetriever(apiClient.HttpClient)
+            );
         }
 
         public async Task<OAuthUser> VerifyTokenAsync(string microsoftToken)
@@ -25,13 +33,7 @@ namespace backend.app.services.implementations
             if (_clientId == null)
                 throw new NotAvaliableException("Microsoft OAuth is not available");
 
-            var authority = "https://login.microsoftonline.com/common/v2.0";
-
-            var configManager =
-                new ConfigurationManager<OpenIdConnectConfiguration>(
-                    $"{authority}/.well-known/openid-configuration",
-                    new OpenIdConnectConfigurationRetriever()
-                );
+            var oidcConfig = await _configManager.GetConfigurationAsync(CancellationToken.None);
 
             var validationParams = new TokenValidationParameters
             {
@@ -40,7 +42,7 @@ namespace backend.app.services.implementations
                 RequireSignedTokens = true,
 
                 ValidAudience = _clientId,
-                ConfigurationManager = configManager,
+                IssuerSigningKeys = oidcConfig.SigningKeys,
 
                 ValidateIssuer = true,
                 IssuerValidator = (issuer, token, parameters) =>
