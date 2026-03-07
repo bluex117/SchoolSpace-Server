@@ -1,7 +1,4 @@
-using System.Security.Claims;
-
 using backend.app.dtos.general;
-using backend.app.configurations.security;
 
 namespace backend.app.configurations.application
 {
@@ -35,11 +32,6 @@ namespace backend.app.configurations.application
             requestInfo.DeviceType = ResolveDeviceType(context);
 
             await _next(context);
-
-            if (context.User.Identity?.IsAuthenticated == true)
-            {
-                requestInfo.UserPayload = ResolveUserPayload(context.User);
-            }
         }
 
         private static string ResolveIpAddress(HttpContext context)
@@ -103,21 +95,6 @@ namespace backend.app.configurations.application
                 return "API Client";
 
             return "Unknown";
-        }
-
-        private static UserIdentityPayload? ResolveUserPayload(ClaimsPrincipal user)
-        {
-            string? idClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            string? emailClaim = user.FindFirst(ClaimTypes.Name)?.Value;
-            string? roleClaim = user.FindFirst(ClaimTypes.Role)?.Value;
-
-            if (string.IsNullOrEmpty(idClaim) || string.IsNullOrEmpty(emailClaim) || string.IsNullOrEmpty(roleClaim))
-                return null;
-
-            if (!int.TryParse(idClaim, out int id))
-                return null;
-
-            return new UserIdentityPayload(id, emailClaim, roleClaim);
         }
     }
 }
